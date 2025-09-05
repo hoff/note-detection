@@ -128,8 +128,9 @@ class OnsetsTask(object):
 
 
 def note_number_to_name(note_number):
-  """Convert MIDI note number to note name."""
-  note_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+  """Convert note index to note name - matches terminal output mapping."""
+  # This matches the notename_color function: A, A#, B, C, C#, D, D#, E, F, F#, G, G#
+  note_names = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
   return note_names[note_number % 12]
 
 
@@ -207,16 +208,21 @@ def result_collector(result_queue, websocket_loop):
         
         if is_frame or is_onset:
           note_name = note_number_to_name(i)
-          octave = (i + 21) // 12  # Approximate octave
+          # Correct octave calculation for piano range (A0 = MIDI 21)
+          midi_note = i + 21
+          octave = (midi_note - 12) // 12  # Standard MIDI octave calculation
           
           frame_notes.append({
             'note': note_name,
             'octave': octave,
-            'midi_note': i + 21,  # Convert to MIDI note number
+            'midi_note': midi_note,
             'velocity': float(velocity),
             'frame_prob': float(note[0]),
             'onset_prob': float(note[1]) if len(note) > 1 else 0.0,
-            'is_onset': bool(is_onset)
+            'offset_prob': float(note[2]) if len(note) > 2 else 0.0,
+            'is_onset': bool(is_onset),
+            'is_frame': bool(is_frame),
+            'strength': float(max(note[0], velocity))  # Overall strength measure
           })
         
         # Console output
@@ -243,7 +249,12 @@ def result_collector(result_queue, websocket_loop):
         note_data = {
             'timestamp': time.time(),
             'notes': list(unique_notes.values()),
-            'serial': serial
+            'serial': serial,
+            'total_notes_detected': len(active_notes),
+            'frame_info': {
+                'frame_threshold': 0.3,
+                'onset_threshold': 0.5
+            }
         }
         
         # Schedule the broadcast in the WebSocket event loop
