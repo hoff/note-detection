@@ -194,12 +194,12 @@ def result_collector(result_queue, websocket_loop):
     if serial > 0:
       result_roll = result_roll[4:]
     
-    # Collect active notes for this frame
-    active_notes = []
-    console_output = []
-    
-    for notes in result_roll:
-      frame_notes = []
+    # Process EACH TIME SLICE separately for faster updates
+    for time_slice_idx, notes in enumerate(result_roll):
+      # Collect active notes for this specific time slice
+      active_notes = []
+      console_output = []
+      
       for i in range(6, len(notes) - 6):
         note = notes[i]
         is_frame = note[0] > 0.3  # Frame threshold
@@ -212,7 +212,7 @@ def result_collector(result_queue, websocket_loop):
           midi_note = i + 21
           octave = (midi_note - 12) // 12  # Standard MIDI octave calculation
           
-          frame_notes.append({
+          active_notes.append({
             'note': note_name,
             'octave': octave,
             'midi_note': midi_note,
@@ -229,37 +229,35 @@ def result_collector(result_queue, websocket_loop):
         notestr = notename_color(i, not is_frame)
         console_output.append(notestr)
       
-      if frame_notes:
-        active_notes.extend(frame_notes)
-    
-    # Print console output
-    for notestr in console_output:
-        print(notestr, end='')
-    print('|')
-    
-    # Send to WebSocket if enabled and there are clients - SEND EVERY FRAME
-    if FLAGS.web_output and websocket_clients:
-        # Group notes by unique note name (remove duplicates) - even if empty
-        unique_notes = {}
-        for note_info in active_notes:
-            key = note_info['note']
-            if key not in unique_notes or note_info['velocity'] > unique_notes[key]['velocity']:
-                unique_notes[key] = note_info
-        
-        note_data = {
-            'timestamp': time.time(),
-            'notes': list(unique_notes.values()),
-            'serial': serial,
-            'total_notes_detected': len(active_notes),
-            'has_notes': len(active_notes) > 0,  # Indicate if frame has any notes
-            'frame_info': {
-                'frame_threshold': 0.3,
-                'onset_threshold': 0.5
-            }
-        }
-        
-        # Schedule the broadcast in the WebSocket event loop for EVERY frame
-        asyncio.run_coroutine_threadsafe(broadcast_notes(note_data), websocket_loop)
+      # Print console output for this time slice
+      for notestr in console_output:
+          print(notestr, end='')
+      print('|')
+      
+      # Send to WebSocket if enabled and there are clients - SEND EVERY TIME SLICE
+      if FLAGS.web_output and websocket_clients:
+          # Group notes by unique note name (remove duplicates) - even if empty
+          unique_notes = {}
+          for note_info in active_notes:
+              key = note_info['note']
+              if key not in unique_notes or note_info['velocity'] > unique_notes[key]['velocity']:
+                  unique_notes[key] = note_info
+          
+          note_data = {
+              'timestamp': time.time(),
+              'notes': list(unique_notes.values()),
+              'serial': serial,
+              'time_slice': time_slice_idx,
+              'total_notes_detected': len(active_notes),
+              'has_notes': len(active_notes) > 0,  # Indicate if frame has any notes
+              'frame_info': {
+                  'frame_threshold': 0.3,
+                  'onset_threshold': 0.5
+              }
+          }
+          
+          # Schedule the broadcast in the WebSocket event loop for EVERY TIME SLICE
+          asyncio.run_coroutine_threadsafe(broadcast_notes(note_data), websocket_loop)
 
 
 def start_websocket_server(loop):
