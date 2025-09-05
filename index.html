@@ -357,6 +357,18 @@
         </div>
 
         <div class="setting-group">
+            <h4>Animation Controls</h4>
+            <div class="setting-item">
+                <div class="setting-label">
+                    <span>Fade Speed</span>
+                    <span id="fadeSpeedValue">2%</span>
+                </div>
+                <input type="range" class="setting-slider" id="fadeSpeed" 
+                       min="0.005" max="0.1" step="0.005" value="0.02">
+            </div>
+        </div>
+
+        <div class="setting-group">
             <h4>Noise Floor</h4>
             <div class="setting-item">
                 <label style="display: flex; align-items: center; color: #ffffff;">
@@ -716,7 +728,8 @@ class NoteDebouncer {
                     maxBarHeight: 250,
                     showNoiseFloor: false,
                     noiseFloorHeight: 0.05,
-                    labelRiseAmount: 10
+                    labelRiseAmount: 10,
+                    fadeSpeed: 0.02  // How fast notes fade (0.01 = very slow, 0.1 = very fast)
                 };
                 
                 this.initCanvas();
@@ -742,7 +755,7 @@ class NoteDebouncer {
                 
                 // Animation properties
                 this.scrollY = 0;
-                this.fadeAmount = 0.05; // Transparency for fade effect
+                this.fadeAmount = 0.02; // Slower fade - lower = slower fade
                 
                 // Initialize note values
                 this.noteValues = {};
@@ -776,21 +789,22 @@ class NoteDebouncer {
             }
             
             animate() {
+                // ALWAYS shift content upward to show time progression
                 // Get the current canvas content as an image
                 const imageData = this.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
                 
-                // Clear the canvas
+                // Clear the canvas with background color
                 this.ctx.fillStyle = '#1a1a1a';
                 this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
                 
                 // Draw the previous content shifted up by 1 pixel
                 this.ctx.putImageData(imageData, 0, -1);
                 
-                // Apply fade effect - draw semi-transparent black over entire canvas
-                this.ctx.fillStyle = `rgba(26, 26, 26, ${this.fadeAmount})`;
+                // Apply fade effect - use setting-controlled fade speed
+                this.ctx.fillStyle = `rgba(26, 26, 26, ${this.settings.fadeSpeed})`;
                 this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
                 
-                // Continue animation
+                // Continue animation loop (runs continuously regardless of note activity)
                 requestAnimationFrame(() => this.animate());
             }
             
@@ -878,6 +892,15 @@ class NoteDebouncer {
                     this.settings.noiseFloorHeight = parseFloat(e.target.value);
                     noiseFloorHeightValue.textContent = Math.round(this.settings.noiseFloorHeight * 100) + '%';
                 });
+
+                // Fade speed slider
+                const fadeSpeedSlider = document.getElementById('fadeSpeed');
+                const fadeSpeedValue = document.getElementById('fadeSpeedValue');
+                
+                fadeSpeedSlider.addEventListener('input', (e) => {
+                    this.settings.fadeSpeed = parseFloat(e.target.value);
+                    fadeSpeedValue.textContent = Math.round(this.settings.fadeSpeed * 100) + '%';
+                });
             }
 
             applyPreset(presetName) {
@@ -918,6 +941,9 @@ class NoteDebouncer {
                 
                 document.getElementById('noiseFloorHeight').value = this.settings.noiseFloorHeight;
                 document.getElementById('noiseFloorHeightValue').textContent = Math.round(this.settings.noiseFloorHeight * 100) + '%';
+                
+                document.getElementById('fadeSpeed').value = this.settings.fadeSpeed;
+                document.getElementById('fadeSpeedValue').textContent = Math.round(this.settings.fadeSpeed * 100) + '%';
             }
 
             connectWebSocket() {
