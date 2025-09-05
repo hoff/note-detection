@@ -196,7 +196,8 @@ def result_collector(result_queue, websocket_loop):
     
     # Process EACH TIME SLICE separately for faster updates
     for time_slice_idx, notes in enumerate(result_roll):
-      # Collect active notes for this specific time slice
+      # Collect ALL note values for this specific time slice (not just detected ones)
+      all_notes = []
       active_notes = []
       console_output = []
       
@@ -206,24 +207,29 @@ def result_collector(result_queue, websocket_loop):
         is_onset = note[1] > 0.5  # Onset threshold
         velocity = note[3] if len(note) > 3 else 1.0
         
+        note_name = note_number_to_name(i)
+        # Correct octave calculation for piano range (A0 = MIDI 21)
+        midi_note = i + 21
+        octave = (midi_note - 12) // 12  # Standard MIDI octave calculation
+        
+        # Always include note data, even if not detected
+        note_data = {
+          'note': note_name,
+          'octave': octave,
+          'midi_note': midi_note,
+          'velocity': float(velocity),
+          'frame_prob': float(note[0]),
+          'onset_prob': float(note[1]) if len(note) > 1 else 0.0,
+          'offset_prob': float(note[2]) if len(note) > 2 else 0.0,
+          'is_onset': bool(is_onset),
+          'is_frame': bool(is_frame),
+          'strength': float(max(note[0], velocity))  # Overall strength measure
+        }
+        
+        all_notes.append(note_data)
+        
         if is_frame or is_onset:
-          note_name = note_number_to_name(i)
-          # Correct octave calculation for piano range (A0 = MIDI 21)
-          midi_note = i + 21
-          octave = (midi_note - 12) // 12  # Standard MIDI octave calculation
-          
-          active_notes.append({
-            'note': note_name,
-            'octave': octave,
-            'midi_note': midi_note,
-            'velocity': float(velocity),
-            'frame_prob': float(note[0]),
-            'onset_prob': float(note[1]) if len(note) > 1 else 0.0,
-            'offset_prob': float(note[2]) if len(note) > 2 else 0.0,
-            'is_onset': bool(is_onset),
-            'is_frame': bool(is_frame),
-            'strength': float(max(note[0], velocity))  # Overall strength measure
-          })
+          active_notes.append(note_data)
         
         # Console output
         notestr = notename_color(i, not is_frame)
@@ -234,22 +240,17 @@ def result_collector(result_queue, websocket_loop):
           print(notestr, end='')
       print('|')
       
-      # Send to WebSocket if enabled and there are clients - SEND EVERY TIME SLICE
+      # Send to WebSocket if enabled and there are clients - SEND EVERY TIME SLICE WITH ALL DATA
       if FLAGS.web_output and websocket_clients:
-          # Group notes by unique note name (remove duplicates) - even if empty
-          unique_notes = {}
-          for note_info in active_notes:
-              key = note_info['note']
-              if key not in unique_notes or note_info['velocity'] > unique_notes[key]['velocity']:
-                  unique_notes[key] = note_info
-          
+          # Send ALL notes (including zeros) for complete bar chart visualization
           note_data = {
               'timestamp': time.time(),
-              'notes': list(unique_notes.values()),
+              'notes': active_notes,  # Only detected notes for bubbles
+              'all_notes': all_notes,  # All notes with their values for bars
               'serial': serial,
               'time_slice': time_slice_idx,
               'total_notes_detected': len(active_notes),
-              'has_notes': len(active_notes) > 0,  # Indicate if frame has any notes
+              'has_notes': len(active_notes) > 0,
               'frame_info': {
                   'frame_threshold': 0.3,
                   'onset_threshold': 0.5
