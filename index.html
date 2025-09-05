@@ -261,9 +261,192 @@
             border-radius: 4px;
             font-family: 'Courier New', monospace;
         }
+
+        .settings-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            background: rgba(0,0,0,0.9);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 1000;
+            transform: translateX(-320px);
+            transition: transform 0.3s ease;
+        }
+
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+
+        .settings-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001;
+            transition: left 0.3s ease;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .settings-toggle:hover {
+            background: rgba(0,0,0,1);
+        }
+
+        .settings-toggle.moved {
+            left: 340px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group h4 {
+            margin: 0 0 10px 0;
+            color: #61dafb;
+            font-size: 1.1rem;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+        }
+
+        .setting-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+
+        .setting-slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .setting-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #61dafb;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .setting-checkbox {
+            margin-right: 8px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
     </style>
 </head>
 <body>
+    <div class="settings-toggle" id="settingsToggle">
+        ⚙️
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+        <h3 style="margin-top: 0; color: #61dafb;">🎛️ Visualization Settings</h3>
+        
+        <div class="setting-group">
+            <h4>Detection Thresholds</h4>
+            <div class="setting-item">
+                <div class="setting-label">
+                    <span>Frame Threshold</span>
+                    <span id="frameThresholdValue">0.3</span>
+                </div>
+                <input type="range" class="setting-slider" id="frameThreshold" 
+                       min="0.1" max="0.8" step="0.05" value="0.3">
+            </div>
+            <div class="setting-item">
+                <div class="setting-label">
+                    <span>Onset Threshold</span>
+                    <span id="onsetThresholdValue">0.5</span>
+                </div>
+                <input type="range" class="setting-slider" id="onsetThreshold" 
+                       min="0.1" max="0.9" step="0.05" value="0.5">
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <h4>Visual Controls</h4>
+            <div class="setting-item">
+                <div class="setting-label">
+                    <span>Max Bar Height</span>
+                    <span id="maxBarHeightValue">250px</span>
+                </div>
+                <input type="range" class="setting-slider" id="maxBarHeight" 
+                       min="100" max="400" step="25" value="250">
+            </div>
+            <div class="setting-item">
+                <div class="setting-label">
+                    <span>Label Rise Amount</span>
+                    <span id="labelRiseAmountValue">10px</span>
+                </div>
+                <input type="range" class="setting-slider" id="labelRiseAmount" 
+                       min="5" max="25" step="2" value="10">
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <h4>Noise Floor</h4>
+            <div class="setting-item">
+                <label style="display: flex; align-items: center; color: #ffffff;">
+                    <input type="checkbox" class="setting-checkbox" id="showNoiseFloor" />
+                    Show Noise Floor
+                </label>
+            </div>
+            <div class="setting-item">
+                <div class="setting-label">
+                    <span>Noise Floor Height</span>
+                    <span id="noiseFloorHeightValue">5%</span>
+                </div>
+                <input type="range" class="setting-slider" id="noiseFloorHeight" 
+                       min="0.01" max="0.1" step="0.01" value="0.05">
+            </div>
+        </div>
+
+        <div class="preset-buttons">
+            <button class="preset-btn" onclick="noteDisplay.applyPreset('clean')">Clean</button>
+            <button class="preset-btn" onclick="noteDisplay.applyPreset('sensitive')">Sensitive</button>
+            <button class="preset-btn" onclick="noteDisplay.applyPreset('debug')">Debug</button>
+        </div>
+    </div>
+
     <div class="header">
         <h1>🎵 Real-Time Note Detection 🎵</h1>
         <div id="status" class="status disconnected">Connecting to WebSocket...</div>
@@ -359,7 +542,18 @@
                     'G#': '#a29bfe', 'A': '#0984e3', 'A#': '#6c5ce7', 'B': '#00b894'
                 };
                 
+                // Visualization settings
+                this.settings = {
+                    frameThreshold: 0.3,
+                    onsetThreshold: 0.5,
+                    maxBarHeight: 250,
+                    showNoiseFloor: false,
+                    noiseFloorHeight: 0.05,
+                    labelRiseAmount: 10
+                };
+                
                 this.initNoteBars();
+                this.initSettings();
                 this.connectWebSocket();
             }
 
@@ -402,6 +596,109 @@
                     const octave = Math.floor(i / 12);
                     this.noteValues[`${note}-${octave}`] = 0;
                 }
+            }
+
+            initSettings() {
+                // Settings panel toggle
+                const settingsToggle = document.getElementById('settingsToggle');
+                const settingsPanel = document.getElementById('settingsPanel');
+                
+                settingsToggle.addEventListener('click', () => {
+                    const isOpen = settingsPanel.classList.contains('open');
+                    settingsPanel.classList.toggle('open');
+                    settingsToggle.classList.toggle('moved');
+                });
+
+                // Frame threshold slider
+                const frameThresholdSlider = document.getElementById('frameThreshold');
+                const frameThresholdValue = document.getElementById('frameThresholdValue');
+                
+                frameThresholdSlider.addEventListener('input', (e) => {
+                    this.settings.frameThreshold = parseFloat(e.target.value);
+                    frameThresholdValue.textContent = this.settings.frameThreshold.toFixed(2);
+                });
+
+                // Onset threshold slider
+                const onsetThresholdSlider = document.getElementById('onsetThreshold');
+                const onsetThresholdValue = document.getElementById('onsetThresholdValue');
+                
+                onsetThresholdSlider.addEventListener('input', (e) => {
+                    this.settings.onsetThreshold = parseFloat(e.target.value);
+                    onsetThresholdValue.textContent = this.settings.onsetThreshold.toFixed(2);
+                });
+
+                // Max bar height slider
+                const maxBarHeightSlider = document.getElementById('maxBarHeight');
+                const maxBarHeightValue = document.getElementById('maxBarHeightValue');
+                
+                maxBarHeightSlider.addEventListener('input', (e) => {
+                    this.settings.maxBarHeight = parseInt(e.target.value);
+                    maxBarHeightValue.textContent = this.settings.maxBarHeight + 'px';
+                });
+
+                // Label rise amount slider
+                const labelRiseAmountSlider = document.getElementById('labelRiseAmount');
+                const labelRiseAmountValue = document.getElementById('labelRiseAmountValue');
+                
+                labelRiseAmountSlider.addEventListener('input', (e) => {
+                    this.settings.labelRiseAmount = parseInt(e.target.value);
+                    labelRiseAmountValue.textContent = this.settings.labelRiseAmount + 'px';
+                });
+
+                // Show noise floor checkbox
+                const showNoiseFloorCheck = document.getElementById('showNoiseFloor');
+                showNoiseFloorCheck.addEventListener('change', (e) => {
+                    this.settings.showNoiseFloor = e.target.checked;
+                });
+
+                // Noise floor height slider
+                const noiseFloorHeightSlider = document.getElementById('noiseFloorHeight');
+                const noiseFloorHeightValue = document.getElementById('noiseFloorHeightValue');
+                
+                noiseFloorHeightSlider.addEventListener('input', (e) => {
+                    this.settings.noiseFloorHeight = parseFloat(e.target.value);
+                    noiseFloorHeightValue.textContent = Math.round(this.settings.noiseFloorHeight * 100) + '%';
+                });
+            }
+
+            applyPreset(presetName) {
+                switch(presetName) {
+                    case 'clean':
+                        this.settings.frameThreshold = 0.4;
+                        this.settings.onsetThreshold = 0.6;
+                        this.settings.showNoiseFloor = false;
+                        break;
+                    case 'sensitive':
+                        this.settings.frameThreshold = 0.2;
+                        this.settings.onsetThreshold = 0.3;
+                        this.settings.showNoiseFloor = true;
+                        break;
+                    case 'debug':
+                        this.settings.frameThreshold = 0.1;
+                        this.settings.onsetThreshold = 0.1;
+                        this.settings.showNoiseFloor = true;
+                        break;
+                }
+                this.updateSettingsUI();
+            }
+
+            updateSettingsUI() {
+                document.getElementById('frameThreshold').value = this.settings.frameThreshold;
+                document.getElementById('frameThresholdValue').textContent = this.settings.frameThreshold.toFixed(2);
+                
+                document.getElementById('onsetThreshold').value = this.settings.onsetThreshold;
+                document.getElementById('onsetThresholdValue').textContent = this.settings.onsetThreshold.toFixed(2);
+                
+                document.getElementById('maxBarHeight').value = this.settings.maxBarHeight;
+                document.getElementById('maxBarHeightValue').textContent = this.settings.maxBarHeight + 'px';
+                
+                document.getElementById('labelRiseAmount').value = this.settings.labelRiseAmount;
+                document.getElementById('labelRiseAmountValue').textContent = this.settings.labelRiseAmount + 'px';
+                
+                document.getElementById('showNoiseFloor').checked = this.settings.showNoiseFloor;
+                
+                document.getElementById('noiseFloorHeight').value = this.settings.noiseFloorHeight;
+                document.getElementById('noiseFloorHeightValue').textContent = Math.round(this.settings.noiseFloorHeight * 100) + '%';
             }
 
             connectWebSocket() {
@@ -503,7 +800,7 @@
                     });
                 }
 
-                // Update all note bars with current values and create history
+                // Update all note bars with current values and create history using thresholds
                 let historyLine = '';
                 const noteRange = 88;
                 
@@ -512,30 +809,71 @@
                     const noteName = noteNames[i % 12];
                     const octave = Math.floor(i / 12);
                     const noteKey = `${noteName}-${octave}`;
-                    const currentValue = this.noteValues[noteKey] || 0;
                     
-                    // Update bar height (max height 250px)
+                    // Get raw values for this note
+                    let rawValue = this.noteValues[noteKey] || 0;
+                    let frameProb = 0;
+                    let onsetProb = 0;
+                    
+                    // Find the corresponding note data to get frame/onset probabilities
+                    if (noteData.all_notes) {
+                        const noteInfo = noteData.all_notes.find(n => `${n.note}-${n.octave}` === noteKey);
+                        if (noteInfo) {
+                            frameProb = noteInfo.frame_prob || 0;
+                            onsetProb = noteInfo.onset_prob || 0;
+                            rawValue = noteInfo.strength || 0;
+                        }
+                    }
+                    
+                    // Apply same thresholding logic as terminal
+                    const isFrame = frameProb > this.settings.frameThreshold;
+                    const isOnset = onsetProb > this.settings.onsetThreshold;
+                    const shouldShow = isFrame || isOnset;
+                    
+                    // Determine display value
+                    let displayValue = 0;
+                    if (shouldShow) {
+                        displayValue = rawValue;
+                    } else if (this.settings.showNoiseFloor && rawValue > this.settings.noiseFloorHeight) {
+                        displayValue = rawValue * 0.3; // Dimmed noise floor
+                    }
+                    
+                    // Update bar visualization
                     const barElement = document.getElementById(`bar-${noteName.replace('#', '-sharp')}-${octave}`);
                     if (barElement) {
                         const noteBox = barElement.querySelector('.note-box');
                         const noteLabelElement = barElement.querySelector('.note-name');
                         
                         if (noteBox) {
-                            const barHeight = Math.max(2, currentValue * 250);
+                            const barHeight = Math.max(2, displayValue * this.settings.maxBarHeight);
                             noteBox.style.height = `${barHeight}px`;
+                            
+                            // Add visual indication for detected vs noise floor
+                            if (shouldShow) {
+                                noteBox.style.opacity = '1.0';
+                                noteBox.style.filter = 'brightness(1.0)';
+                            } else if (displayValue > 0) {
+                                noteBox.style.opacity = '0.4';
+                                noteBox.style.filter = 'brightness(0.6)';
+                            }
                         }
                         
-                        // Update note name position and opacity based on strength
+                        // Update note name position and opacity
                         if (noteLabelElement) {
-                            noteLabelElement.style.opacity = Math.min(1.0, 0.3 + currentValue * 0.7);
-                            noteLabelElement.style.transform = `translateY(-${currentValue * 10}px)`;
+                            if (shouldShow) {
+                                noteLabelElement.style.opacity = Math.min(1.0, 0.6 + displayValue * 0.4);
+                                noteLabelElement.style.transform = `translateY(-${displayValue * this.settings.labelRiseAmount}px)`;
+                            } else {
+                                noteLabelElement.style.opacity = '0.3';
+                                noteLabelElement.style.transform = 'translateY(0px)';
+                            }
                         }
                     }
                     
-                    // Update history line
-                    if (currentValue > 0.1) {
+                    // Update history line (only show detected notes, like terminal)
+                    if (shouldShow) {
                         const color = this.noteColors[noteName] || '#ffffff';
-                        historyLine += `<span class="note-char" style="color: ${color}; opacity: ${0.7 + currentValue * 0.3}">${noteName}</span>`;
+                        historyLine += `<span class="note-char" style="color: ${color}; opacity: ${0.7 + displayValue * 0.3}">${noteName}</span>`;
                     } else {
                         historyLine += '<span class="note-char"> </span>';
                     }
