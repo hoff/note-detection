@@ -99,55 +99,7 @@
         .note-G .note-box { background: linear-gradient(to top, #00b894, #55efc4); }
         .note-G-sharp .note-box { background: linear-gradient(to top, #a29bfe, #6c5ce7); }
 
-        .note-display {
-            text-align: center;
-            margin: 30px 0;
-        }
 
-        .current-notes {
-            min-height: 100px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .note-bubble {
-            padding: 15px 25px;
-            border-radius: 50px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            min-width: 60px;
-            text-align: center;
-            animation: noteAppear 0.3s ease-out;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        }
-
-        @keyframes noteAppear {
-            from {
-                transform: scale(0);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .note-C { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
-        .note-C-sharp { background: linear-gradient(135deg, #4834d4, #686de0); }
-        .note-D { background: linear-gradient(135deg, #ff9ff3, #f368e0); }
-        .note-D-sharp { background: linear-gradient(135deg, #ff3838, #ff6b6b); }
-        .note-E { background: linear-gradient(135deg, #ffbe0b, #fb8500); }
-        .note-F { background: linear-gradient(135deg, #8ecae6, #219ebc); }
-        .note-F-sharp { background: linear-gradient(135deg, #2d3436, #636e72); }
-        .note-G { background: linear-gradient(135deg, #00b894, #00cec9); }
-        .note-G-sharp { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
-        .note-A { background: linear-gradient(135deg, #fd79a8, #fdcb6e); }
-        .note-A-sharp { background: linear-gradient(135deg, #0984e3, #74b9ff); }
-        .note-B { background: linear-gradient(135deg, #e17055, #fab1a0); }
 
         .octave-info {
             text-align: center;
@@ -216,7 +168,7 @@
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: 1fr;
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -464,17 +416,249 @@
         </div>
     </div>
 
-    <div class="note-display">
-        <h2>Current Notes</h2>
-        <div class="current-notes" id="currentNotes">
-            <div style="opacity: 0.5; font-size: 1.2rem;">Waiting for notes...</div>
-        </div>
-    </div>
 
     <div class="note-history">
         <h2>Note History (Rolling Display)</h2>
         <div class="history-container" id="historyContainer">
             <div style="opacity: 0.5;">Waiting for note data...</div>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h2>📖 JavaScript API Documentation</h2>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>🔌 WebSocket Connection</h3>
+                <pre><code>// Connect to the note detection WebSocket
+const socket = new WebSocket('ws://localhost:8765');
+
+socket.onmessage = (event) => {
+    const noteData = JSON.parse(event.data);
+    processNoteData(noteData);
+};
+
+socket.onopen = () => console.log('Connected to note detection');
+socket.onerror = (error) => console.error('WebSocket error:', error);</code></pre>
+            </div>
+            
+            <div class="info-card">
+                <h3>📊 Data Structure</h3>
+                <p>Each WebSocket message contains a JSON object with the following structure:</p>
+                <pre><code>{
+  "timestamp": 1693938200.123,        // Unix timestamp
+  "notes": [...],                     // Detected notes (above threshold)
+  "all_notes": [...],                 // All 88 piano notes with values
+  "serial": 42,                       // Frame sequence number
+  "time_slice": 0,                    // Time slice within frame
+  "total_notes_detected": 3,          // Count of detected notes
+  "has_notes": true,                  // Boolean flag
+  "frame_info": {                     // Threshold settings
+    "frame_threshold": 0.3,
+    "onset_threshold": 0.5
+  }
+}</code></pre>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎵 Note Object Format</h3>
+                <p>Each note in the <code>notes</code> and <code>all_notes</code> arrays:</p>
+                <pre><code>{
+  "note": "C",                        // Note name: A, A#, B, C, C#, D, D#, E, F, F#, G, G#
+  "octave": 4,                        // Octave number (0-7 for 88-key piano)
+  "midi_note": 60,                    // MIDI note number (21-108)
+  "velocity": 0.85,                   // Velocity/strength (0.0-1.0)
+  "frame_prob": 0.42,                 // Frame detection probability
+  "onset_prob": 0.67,                 // Onset detection probability  
+  "offset_prob": 0.12,                // Offset detection probability
+  "is_onset": true,                   // Above onset threshold
+  "is_frame": false,                  // Above frame threshold
+  "strength": 0.85                    // Max of frame_prob and velocity
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h2>🔧 Data Filtering & Transformation</h2>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>🎯 Basic Filtering</h3>
+                <pre><code>// Filter only detected notes (above thresholds)
+const detectedNotes = noteData.notes;
+
+// Filter by note name
+const cNotes = noteData.all_notes.filter(n => n.note === 'C');
+
+// Filter by octave range
+const midRangeNotes = noteData.all_notes.filter(n => 
+    n.octave >= 3 && n.octave <= 5
+);
+
+// Filter by strength/confidence
+const strongNotes = noteData.all_notes.filter(n => 
+    n.strength > 0.7
+);
+
+// Filter only onsets (new note attacks)
+const onsetNotes = noteData.notes.filter(n => n.is_onset);</code></pre>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎼 Chord Detection</h3>
+                <pre><code>// Simple chord detection example
+function detectChords(noteData) {
+    const activeNotes = noteData.notes.map(n => n.note);
+    
+    // Common chord patterns
+    const chordPatterns = {
+        'C Major': ['C', 'E', 'G'],
+        'A Minor': ['A', 'C', 'E'],
+        'F Major': ['F', 'A', 'C'],
+        'G Major': ['G', 'B', 'D']
+    };
+    
+    for (const [chordName, pattern] of Object.entries(chordPatterns)) {
+        const hasAllNotes = pattern.every(note => 
+            activeNotes.includes(note)
+        );
+        if (hasAllNotes) {
+            console.log(`Detected: ${chordName}`);
+        }
+    }
+}</code></pre>
+            </div>
+            
+            <div class="info-card">
+                <h3>📈 Real-time Analysis</h3>
+                <pre><code>// Track note history for analysis
+class NoteAnalyzer {
+    constructor() {
+        this.noteHistory = [];
+        this.maxHistory = 100; // Keep last 100 frames
+    }
+    
+    analyze(noteData) {
+        // Add to history
+        this.noteHistory.push({
+            timestamp: noteData.timestamp,
+            notes: noteData.notes.map(n => ({
+                note: n.note,
+                octave: n.octave,
+                strength: n.strength
+            }))
+        });
+        
+        // Keep history size manageable
+        if (this.noteHistory.length > this.maxHistory) {
+            this.noteHistory.shift();
+        }
+        
+        // Calculate average activity
+        const recentFrames = this.noteHistory.slice(-10);
+        const avgActivity = recentFrames.reduce((sum, frame) => 
+            sum + frame.notes.length, 0) / recentFrames.length;
+            
+        return { avgActivity, recentFrames };
+    }
+}</code></pre>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎨 Custom Visualization</h3>
+                <pre><code>// Example: Create custom note visualizer
+class CustomNoteVisualizer {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.socket = new WebSocket('ws://localhost:8765');
+        this.setupWebSocket();
+    }
+    
+    setupWebSocket() {
+        this.socket.onmessage = (event) => {
+            const noteData = JSON.parse(event.data);
+            this.updateVisualization(noteData);
+        };
+    }
+    
+    updateVisualization(noteData) {
+        // Clear previous visualization
+        this.container.innerHTML = '';
+        
+        // Create elements for detected notes only
+        noteData.notes.forEach(note => {
+            const noteElement = document.createElement('div');
+            noteElement.className = 'custom-note';
+            noteElement.textContent = `${note.note}${note.octave}`;
+            
+            // Scale size by strength
+            const scale = 0.5 + (note.strength * 1.5);
+            noteElement.style.transform = `scale(${scale})`;
+            
+            // Color by octave
+            noteElement.style.backgroundColor = 
+                `hsl(${note.octave * 50}, 70%, 60%)`;
+                
+            this.container.appendChild(noteElement);
+        });
+    }
+}
+
+// Usage
+const visualizer = new CustomNoteVisualizer('myContainer');</code></pre>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎛️ Advanced Filtering</h3>
+                <pre><code>// Custom threshold filtering
+function applyCustomThresholds(noteData, frameThreshold = 0.3, onsetThreshold = 0.5) {
+    return noteData.all_notes.filter(note => {
+        const isFrame = note.frame_prob > frameThreshold;
+        const isOnset = note.onset_prob > onsetThreshold;
+        return isFrame || isOnset;
+    });
+}
+
+// Velocity-based filtering
+function filterByVelocity(noteData, minVelocity = 0.5) {
+    return noteData.all_notes.filter(note => 
+        note.velocity > minVelocity
+    );
+}
+
+// Note range filtering (by MIDI numbers)
+function filterNoteRange(noteData, minMidi = 21, maxMidi = 108) {
+    return noteData.all_notes.filter(note => 
+        note.midi_note >= minMidi && note.midi_note <= maxMidi
+    );
+}
+
+// Temporal filtering (debouncing rapid changes)
+class NoteDebouncer {
+    constructor(debounceMs = 100) {
+        this.debounceMs = debounceMs;
+        this.lastNotes = new Map();
+    }
+    
+    filter(noteData) {
+        const now = noteData.timestamp * 1000;
+        const stableNotes = [];
+        
+        noteData.notes.forEach(note => {
+            const key = `${note.note}-${note.octave}`;
+            const lastSeen = this.lastNotes.get(key) || 0;
+            
+            if (now - lastSeen > this.debounceMs) {
+                stableNotes.push(note);
+                this.lastNotes.set(key, now);
+            }
+        });
+        
+        return stableNotes;
+    }
+}</code></pre>
+            </div>
         </div>
     </div>
 
@@ -742,6 +926,7 @@
             }
 
             handleNoteData(noteData) {
+                console.log('Received note data:', noteData);
                 this.noteCount++;
                 document.getElementById('note-count').textContent = this.noteCount;
                 
@@ -774,29 +959,13 @@
                     });
                 }
 
-                // Update current notes display with only detected notes
-                const currentNotesDiv = document.getElementById('currentNotes');
-                currentNotesDiv.innerHTML = '';
-
+                // Track active notes for visualization
                 if (noteData.notes && noteData.notes.length > 0) {
                     noteData.notes.forEach(noteInfo => {
                         const note = noteInfo.note;
                         const octave = noteInfo.octave || 4;
-                        const velocity = noteInfo.velocity || 1.0;
-                        const frameProb = noteInfo.frame_prob || 0;
-                        const strength = Math.max(frameProb, velocity);
                         const noteKey = `${note}-${octave}`;
-                        
                         this.activeNotes.add(noteKey);
-                        
-                        // Create note bubble for active notes
-                        const bubble = document.createElement('div');
-                        bubble.className = `note-bubble note-${note.replace('#', '-sharp')}`;
-                        bubble.textContent = `${note}${octave}`;
-                        bubble.style.opacity = Math.min(1.0, 0.6 + strength * 0.4);
-                        bubble.style.transform = `scale(${0.8 + strength * 0.4})`;
-                        bubble.title = `Note: ${note}${octave}, Strength: ${(strength*100).toFixed(1)}%, Frame: ${(frameProb*100).toFixed(1)}%, Velocity: ${(velocity*100).toFixed(1)}%`;
-                        currentNotesDiv.appendChild(bubble);
                     });
                 }
 
@@ -830,6 +999,11 @@
                     const isOnset = onsetProb > this.settings.onsetThreshold;
                     const shouldShow = isFrame || isOnset;
                     
+                    // Debug logging for detected notes
+                    if (shouldShow) {
+                        console.log(`Note detected: ${noteName}${octave}, frame: ${frameProb.toFixed(3)}, onset: ${onsetProb.toFixed(3)}, raw: ${rawValue.toFixed(3)}`);
+                    }
+                    
                     // Determine display value
                     let displayValue = 0;
                     if (shouldShow) {
@@ -848,6 +1022,11 @@
                             const barHeight = Math.max(2, displayValue * this.settings.maxBarHeight);
                             noteBox.style.height = `${barHeight}px`;
                             
+                            // Debug bar updates for detected notes
+                            if (shouldShow) {
+                                console.log(`Updating bar ${noteName}${octave}: height=${barHeight}px, displayValue=${displayValue.toFixed(3)}`);
+                            }
+                            
                             // Add visual indication for detected vs noise floor
                             if (shouldShow) {
                                 noteBox.style.opacity = '1.0';
@@ -856,6 +1035,8 @@
                                 noteBox.style.opacity = '0.4';
                                 noteBox.style.filter = 'brightness(0.6)';
                             }
+                        } else if (shouldShow) {
+                            console.log(`ERROR: noteBox not found for ${noteName}${octave}`);
                         }
                         
                         // Update note name position and opacity
@@ -895,15 +1076,6 @@
                 historyContainer.innerHTML = this.historyLines.join('<br>');
                 historyContainer.scrollTop = historyContainer.scrollHeight;
 
-                // Show "no notes" message if needed, but keep it subtle for frequent updates
-                if (!noteData.notes || noteData.notes.length === 0) {
-                    // Only show message occasionally to avoid flickering during fast updates
-                    if (this.noteCount % 10 === 0) {  // Every 10th frame
-                        currentNotesDiv.innerHTML = '<div style="opacity: 0.3; font-size: 1rem;">Listening...</div>';
-                    } else {
-                        currentNotesDiv.innerHTML = ''; // Keep it clean most of the time
-                    }
-                }
             }
         }
 
