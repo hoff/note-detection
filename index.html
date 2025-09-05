@@ -742,22 +742,24 @@ class NoteDebouncer {
                 this.canvas = document.getElementById('noteCanvas');
                 this.ctx = this.canvas.getContext('2d');
                 
+                // Create a back buffer for smooth scrolling
+                this.backBuffer = document.createElement('canvas');
+                this.backCtx = this.backBuffer.getContext('2d');
+                
                 // Canvas dimensions
                 this.canvasWidth = 1200;
                 this.canvasHeight = 400;
                 this.canvas.width = this.canvasWidth;
                 this.canvas.height = this.canvasHeight;
+                this.backBuffer.width = this.canvasWidth;
+                this.backBuffer.height = this.canvasHeight;
                 
                 // Note layout - 88 piano keys
                 this.numNotes = 88;
                 this.noteWidth = this.canvasWidth / this.numNotes;
                 this.notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
                 
-                // Animation properties
-                this.scrollY = 0;
-                this.fadeAmount = 0.02; // Slower fade - lower = slower fade
-                
-                // Initialize note values
+                // Initialize note values (updated by WebSocket, drawn by animation loop)
                 this.noteValues = {};
                 for (let i = 0; i < this.numNotes; i++) {
                     const note = this.notes[i % 12];
@@ -787,49 +789,70 @@ class NoteDebouncer {
                     labelsContainer.appendChild(label);
                 }
             }
+
+            animationCount = 0
             
             animate() {
-                // ALWAYS shift content upward to show time progression
-                // Get the current canvas content as an image
-                const imageData = this.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+                // Use double buffering to avoid canvas read/write conflicts
+                // Copy current canvas to back buffer shifted up
+                this.backCtx.fillStyle = '#1a1a1a';
+                this.backCtx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+                this.backCtx.drawImage(this.canvas, 0, -1);
                 
-                // Clear the canvas with background color
-                this.ctx.fillStyle = '#1a1a1a';
-                this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+                // Apply fade effect to back buffer
+                this.backCtx.fillStyle = `rgba(26, 26, 26, ${this.settings.fadeSpeed})`;
+                this.backCtx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
                 
-                // Draw the previous content shifted up by 1 pixel
-                this.ctx.putImageData(imageData, 0, -1);
+                // Draw current notes to back buffer
+                this.drawCurrentNotesToBuffer();
                 
-                // Apply fade effect - use setting-controlled fade speed
-                this.ctx.fillStyle = `rgba(26, 26, 26, ${this.settings.fadeSpeed})`;
-                this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+                // Copy back buffer to main canvas
+                this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                this.ctx.drawImage(this.backBuffer, 0, 0);
+
+                this.animationCount +=1 
+                console.log('draw', this.animationCount)
                 
-                // Continue animation loop (runs continuously regardless of note activity)
+                // Continue animation loop - runs continuously at 60fps
                 requestAnimationFrame(() => this.animate());
             }
             
-            drawNoteActivation(noteIndex, activation) {
-                // Calculate position
+            drawCurrentNotesToBuffer() {
+                // Draw rectangles for all 88 notes to the back buffer
+                for (let i = 0; i < this.numNotes; i++) {
+                    const note = this.notes[i % 12];
+                    const octave = Math.floor(i / 12);
+                    const noteKey = `${note}-${octave}`;
+                    const activation = this.noteValues[noteKey] || 0;
+                    
+                    // Always draw rectangle, even if activation is 0 (just very transparent)
+                    if (activation > 0 || this.settings.showNoiseFloor) {
+                        this.drawNoteRectToBuffer(i, activation);
+                    }
+                }
+            }
+            
+            drawNoteRectToBuffer(noteIndex, activation) {
                 const x = noteIndex * this.noteWidth;
-                const y = this.canvasHeight - 20; // Start from bottom
+                const y = this.canvasHeight - 15; // Always at bottom
                 
-                // Calculate brightness based on activation (0-1)
-                const brightness = Math.min(1, activation * 2); // Scale activation
-                const alpha = brightness;
+                // Calculate opacity based on activation level
+                const alpha = Math.max(0.05, activation); // Minimum visibility
                 
                 // Get note color
                 const note = this.notes[noteIndex % 12];
                 const color = this.noteColors[note] || '#ffffff';
                 
-                // Convert hex to RGB for alpha blending
+                // Convert hex to RGB
                 const r = parseInt(color.slice(1, 3), 16);
                 const g = parseInt(color.slice(3, 5), 16);
                 const b = parseInt(color.slice(5, 7), 16);
                 
-                // Draw rectangle with brightness-based alpha
-                this.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                this.ctx.fillRect(x, y, this.noteWidth - 1, 10);
+                // Draw rectangle to back buffer
+                this.backCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                this.backCtx.fillRect(x, y, this.noteWidth - 1, 12);
             }
+            
 
             initSettings() {
                 // Settings panel toggle
@@ -1073,14 +1096,12 @@ class NoteDebouncer {
                         displayValue = rawValue * 0.3; // Dimmed noise floor
                     }
                     
-                    // Draw note activation on canvas
-                    if (displayValue > 0) {
-                        this.drawNoteActivation(i, displayValue);
-                        
-                        // Debug canvas updates for detected notes
-                        if (shouldShow) {
-                            console.log(`Drawing note ${noteName}${octave}: activation=${displayValue.toFixed(3)}`);
-                        }
+                    // Update note value - animation loop will draw it
+                    this.noteValues[noteKey] = displayValue;
+                    
+                    // Debug note updates
+                    if (shouldShow) {
+                        console.log(`Note ${noteName}${octave}: activation=${displayValue.toFixed(3)}`);
                     }
                     
                     // Update history line (only show detected notes, like terminal)
