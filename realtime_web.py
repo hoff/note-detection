@@ -237,9 +237,9 @@ def result_collector(result_queue, websocket_loop):
         print(notestr, end='')
     print('|')
     
-    # Send to WebSocket if enabled and there are clients
-    if FLAGS.web_output and websocket_clients and active_notes:
-        # Group notes by unique note name (remove duplicates)
+    # Send to WebSocket if enabled and there are clients - SEND EVERY FRAME
+    if FLAGS.web_output and websocket_clients:
+        # Group notes by unique note name (remove duplicates) - even if empty
         unique_notes = {}
         for note_info in active_notes:
             key = note_info['note']
@@ -251,13 +251,14 @@ def result_collector(result_queue, websocket_loop):
             'notes': list(unique_notes.values()),
             'serial': serial,
             'total_notes_detected': len(active_notes),
+            'has_notes': len(active_notes) > 0,  # Indicate if frame has any notes
             'frame_info': {
                 'frame_threshold': 0.3,
                 'onset_threshold': 0.5
             }
         }
         
-        # Schedule the broadcast in the WebSocket event loop
+        # Schedule the broadcast in the WebSocket event loop for EVERY frame
         asyncio.run_coroutine_threadsafe(broadcast_notes(note_data), websocket_loop)
 
 

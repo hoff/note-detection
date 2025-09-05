@@ -272,7 +272,8 @@
 
     <div class="connection-info">
         <div>WebSocket: <span id="ws-status">Connecting...</span></div>
-        <div>Notes Received: <span id="note-count">0</span></div>
+        <div>Frames Received: <span id="note-count">0</span></div>
+        <div>Update Rate: <span id="update-rate">0</span> FPS</div>
     </div>
 
     <div class="piano-container">
@@ -351,6 +352,8 @@
                 this.activeNotes = new Set();
                 this.historyLines = [];
                 this.maxHistoryLines = 50;
+                this.lastFrameTime = Date.now();
+                this.frameRates = [];
                 this.noteColors = {
                     'C': '#00cec9', 'C#': '#74b9ff', 'D': '#ff7675', 'D#': '#fd79a8',
                     'E': '#fdcb6e', 'F': '#e1f5fe', 'F#': '#636e72', 'G': '#00b894',
@@ -426,6 +429,19 @@
             handleNoteData(noteData) {
                 this.noteCount++;
                 document.getElementById('note-count').textContent = this.noteCount;
+                
+                // Calculate and display frame rate
+                const now = Date.now();
+                const frameTime = now - this.lastFrameTime;
+                this.lastFrameTime = now;
+                
+                this.frameRates.push(1000 / frameTime);
+                if (this.frameRates.length > 10) {
+                    this.frameRates.shift();
+                }
+                
+                const avgFPS = this.frameRates.reduce((a, b) => a + b, 0) / this.frameRates.length;
+                document.getElementById('update-rate').textContent = avgFPS.toFixed(1);
                 
                 // Clear previous active states
                 document.querySelectorAll('.key.active').forEach(key => {
@@ -508,9 +524,14 @@
                 historyContainer.innerHTML = this.historyLines.join('<br>');
                 historyContainer.scrollTop = historyContainer.scrollHeight;
 
-                // Show "no notes" message if needed
+                // Show "no notes" message if needed, but keep it subtle for frequent updates
                 if (!noteData.notes || noteData.notes.length === 0) {
-                    currentNotesDiv.innerHTML = '<div style="opacity: 0.5; font-size: 1.2rem;">No notes detected</div>';
+                    // Only show message occasionally to avoid flickering during fast updates
+                    if (this.noteCount % 10 === 0) {  // Every 10th frame
+                        currentNotesDiv.innerHTML = '<div style="opacity: 0.3; font-size: 1rem;">Listening...</div>';
+                    } else {
+                        currentNotesDiv.innerHTML = ''; // Keep it clean most of the time
+                    }
                 }
             }
         }
