@@ -13,3 +13,11 @@ We can use this document to track our progress.
 source magenta_env/bin/activate
 
 python start_web_demo.py 
+
+
+///
+
+status: notes get nicely detected, but the history animation isn't smooth for some reason...
+
+find out why that is, and port to codebase-anguar codebase-tools/note-detection
+
