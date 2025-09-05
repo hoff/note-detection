@@ -7,3 +7,9 @@ Nothing has been installed yet.
 Can you help me create a virtual environment, install what is needed, to help me run this demo?
 
 We can use this document to track our progress.
+
+///
+
+source magenta_env/bin/activate
+
+python start_web_demo.py 
