@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Note Detection</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .connected { background-color: #4CAF50; }
+        .disconnected { background-color: #f44336; }
+
+        .piano-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            perspective: 1000px;
+        }
+
+        .piano {
+            display: flex;
+            justify-content: center;
+            height: 200px;
+            margin: 20px 0;
+            transform: rotateX(10deg);
+        }
+
+        .key {
+            position: relative;
+            margin: 0 1px;
+            border-radius: 0 0 5px 5px;
+            transition: all 0.1s ease;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .white-key {
+            width: 40px;
+            height: 160px;
+            background: linear-gradient(to bottom, #fafafa, #e0e0e0);
+            border: 1px solid #ccc;
+            color: #333;
+            z-index: 1;
+        }
+
+        .black-key {
+            width: 25px;
+            height: 100px;
+            background: linear-gradient(to bottom, #2c2c2c, #000);
+            color: white;
+            margin: 0 -12.5px;
+            z-index: 2;
+        }
+
+        .key.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255,255,255,0.8);
+        }
+
+        .white-key.active {
+            background: linear-gradient(to bottom, #ffeb3b, #ffc107);
+            color: #333;
+        }
+
+        .black-key.active {
+            background: linear-gradient(to bottom, #ff5722, #d32f2f);
+        }
+
+        .note-display {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .current-notes {
+            min-height: 100px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .note-bubble {
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+            animation: noteAppear 0.3s ease-out;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        @keyframes noteAppear {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .note-C { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .note-C-sharp { background: linear-gradient(135deg, #4834d4, #686de0); }
+        .note-D { background: linear-gradient(135deg, #ff9ff3, #f368e0); }
+        .note-D-sharp { background: linear-gradient(135deg, #ff3838, #ff6b6b); }
+        .note-E { background: linear-gradient(135deg, #ffbe0b, #fb8500); }
+        .note-F { background: linear-gradient(135deg, #8ecae6, #219ebc); }
+        .note-F-sharp { background: linear-gradient(135deg, #2d3436, #636e72); }
+        .note-G { background: linear-gradient(135deg, #00b894, #00cec9); }
+        .note-G-sharp { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+        .note-A { background: linear-gradient(135deg, #fd79a8, #fdcb6e); }
+        .note-A-sharp { background: linear-gradient(135deg, #0984e3, #74b9ff); }
+        .note-B { background: linear-gradient(135deg, #e17055, #fab1a0); }
+
+        .octave-info {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .connection-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎵 Real-Time Note Detection 🎵</h1>
+        <div id="status" class="status disconnected">Connecting to WebSocket...</div>
+    </div>
+
+    <div class="connection-info">
+        <div>WebSocket: <span id="ws-status">Connecting...</span></div>
+        <div>Notes Received: <span id="note-count">0</span></div>
+    </div>
+
+    <div class="piano-container">
+        <div class="piano" id="piano">
+            <!-- Piano keys will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="note-display">
+        <h2>Current Notes</h2>
+        <div class="current-notes" id="currentNotes">
+            <div style="opacity: 0.5; font-size: 1.2rem;">Waiting for notes...</div>
+        </div>
+    </div>
+
+    <script>
+        class NoteDetectionDisplay {
+            constructor() {
+                this.socket = null;
+                this.noteCount = 0;
+                this.activeNotes = new Set();
+                this.noteColors = {
+                    'C': '#ff6b6b', 'C#': '#4834d4', 'D': '#ff9ff3', 'D#': '#ff3838',
+                    'E': '#ffbe0b', 'F': '#8ecae6', 'F#': '#2d3436', 'G': '#00b894',
+                    'G#': '#6c5ce7', 'A': '#fd79a8', 'A#': '#0984e3', 'B': '#e17055'
+                };
+                
+                this.initPiano();
+                this.connectWebSocket();
+            }
+
+            initPiano() {
+                const piano = document.getElementById('piano');
+                const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                
+                // Create one octave of keys
+                notes.forEach(note => {
+                    const key = document.createElement('div');
+                    key.className = note.includes('#') ? 'key black-key' : 'key white-key';
+                    key.id = `key-${note.replace('#', '-sharp')}`;
+                    key.textContent = note;
+                    piano.appendChild(key);
+                });
+            }
+
+            connectWebSocket() {
+                try {
+                    this.socket = new WebSocket('ws://localhost:8765');
+                    
+                    this.socket.onopen = () => {
+                        console.log('WebSocket connected');
+                        this.updateStatus('Connected', true);
+                        document.getElementById('ws-status').textContent = 'Connected';
+                    };
+
+                    this.socket.onmessage = (event) => {
+                        const noteData = JSON.parse(event.data);
+                        this.handleNoteData(noteData);
+                    };
+
+                    this.socket.onclose = () => {
+                        console.log('WebSocket disconnected');
+                        this.updateStatus('Disconnected', false);
+                        document.getElementById('ws-status').textContent = 'Disconnected';
+                        
+                        // Try to reconnect after 3 seconds
+                        setTimeout(() => this.connectWebSocket(), 3000);
+                    };
+
+                    this.socket.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateStatus('Connection Error', false);
+                    };
+                } catch (error) {
+                    console.error('Failed to create WebSocket:', error);
+                    this.updateStatus('Connection Failed', false);
+                }
+            }
+
+            updateStatus(message, connected) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = connected ? 'status connected' : 'status disconnected';
+            }
+
+            handleNoteData(noteData) {
+                this.noteCount++;
+                document.getElementById('note-count').textContent = this.noteCount;
+                
+                // Clear previous active states
+                this.activeNotes.forEach(note => {
+                    const key = document.getElementById(`key-${note.replace('#', '-sharp')}`);
+                    if (key) key.classList.remove('active');
+                });
+                this.activeNotes.clear();
+
+                // Display current notes
+                const currentNotesDiv = document.getElementById('currentNotes');
+                currentNotesDiv.innerHTML = '';
+
+                if (noteData.notes && noteData.notes.length > 0) {
+                    noteData.notes.forEach(noteInfo => {
+                        const note = noteInfo.note;
+                        const velocity = noteInfo.velocity || 1.0;
+                        
+                        // Add to active notes
+                        this.activeNotes.add(note);
+                        
+                        // Highlight piano key
+                        const key = document.getElementById(`key-${note.replace('#', '-sharp')}`);
+                        if (key) key.classList.add('active');
+                        
+                        // Create note bubble
+                        const bubble = document.createElement('div');
+                        bubble.className = `note-bubble note-${note.replace('#', '-sharp')}`;
+                        bubble.textContent = note;
+                        bubble.style.opacity = Math.min(1.0, velocity);
+                        currentNotesDiv.appendChild(bubble);
+                    });
+                } else {
+                    currentNotesDiv.innerHTML = '<div style="opacity: 0.5; font-size: 1.2rem;">No notes detected</div>';
+                }
+            }
+        }
+
+        // Start the application
+        window.addEventListener('load', () => {
+            new NoteDetectionDisplay();
+        });
+    </script>
+</body>
+</html>
