@@ -2,19 +2,25 @@
 
 ## Project Overview
 
-This project provides real-time polyphonic musical note detection using Google's Magenta TensorFlow models, with a beautiful waterfall visualization displaying detected notes in a browser interface.
+This project provides real-time polyphonic musical note detection using Google's
+Magenta TensorFlow models, with a beautiful waterfall visualization displaying
+detected notes in a browser interface.
 
 ## Project Genesis & Development History
 
 ### Initial Goal
-The project started with a simple objective: implement local real-time note detection using Magenta's onsets_frames_transcription models to experiment with musical AI.
+
+The project started with a simple objective: implement local real-time note
+detection using Magenta's onsets_frames_transcription models to experiment with
+musical AI.
 
 ### Evolution Timeline
 
-1. **Basic Setup Phase**: 
+1. **Basic Setup Phase**:
    - Cloned Magenta repository for model access
    - Set up Python virtual environment with TensorFlow dependencies
-   - Downloaded TensorFlow Lite model (`onsets_frames_wavinput_no_offset_uni.tflite`)
+   - Downloaded TensorFlow Lite model
+     (`onsets_frames_wavinput_no_offset_uni.tflite`)
    - Got basic terminal-based note detection working
 
 2. **Web Integration Phase**:
@@ -62,12 +68,14 @@ The project started with a simple objective: implement local real-time note dete
 ### Python Backend (`realtime_web.py`)
 
 **Core Components:**
+
 - **Audio Recorder**: Captures microphone input at 16kHz sample rate
 - **TensorFlow Lite Model**: Processes 2048-sample frames with 75% overlap
 - **Worker Pool**: 4 parallel processes for real-time inference
 - **WebSocket Server**: Streams results to browser at 8765
 
 **Data Flow:**
+
 1. Audio captured in 128ms frames (2048 samples @ 16kHz)
 2. Frames processed by TensorFlow Lite model (onsets_frames_transcription)
 3. Model outputs frame/onset/velocity probabilities for 88 piano keys
@@ -75,6 +83,7 @@ The project started with a simple objective: implement local real-time note dete
 5. Results streamed via WebSocket as JSON
 
 **Key Files:**
+
 - `realtime_web.py`: Main application with WebSocket integration
 - `audio_recorder.py`: Audio capture and preprocessing
 - `tflite_model.py`: TensorFlow Lite model wrapper
@@ -83,12 +92,14 @@ The project started with a simple objective: implement local real-time note dete
 ### Frontend (`index.html`)
 
 **Core Components:**
+
 - **WebSocket Client**: Receives real-time note data
 - **Canvas Renderer**: 60fps waterfall visualization with double-buffering
 - **Settings Panel**: Real-time control of thresholds and visualization
 - **Performance Monitoring**: FPS counters and connection status
 
 **Visualization Features:**
+
 - **Waterfall Effect**: Notes appear at bottom, scroll upward while fading
 - **88-Key Coverage**: Full piano range (A0-C8, MIDI notes 21-108)
 - **Color Coding**: Each note has distinct color (A=blue, C=cyan, etc.)
@@ -97,6 +108,7 @@ The project started with a simple objective: implement local real-time note dete
 ### Data Protocol
 
 **WebSocket Message Format:**
+
 ```javascript
 {
   "timestamp": 1693938200.123,        // Unix timestamp
@@ -114,6 +126,7 @@ The project started with a simple objective: implement local real-time note dete
 ```
 
 **Individual Note Object:**
+
 ```javascript
 {
   "note": "C",                        // Note name: A, A#, B, C, C#, D, D#, E, F, F#, G, G#
@@ -132,7 +145,9 @@ The project started with a simple objective: implement local real-time note dete
 ## Magenta Repository Integration
 
 ### Current Structure
+
 The project includes the entire Magenta repository as a subdirectory:
+
 ```
 note-detection/
 ├── magenta/                    # Full Magenta repository (entire clone)
@@ -152,18 +167,21 @@ note-detection/
 ```
 
 ### Why Magenta Repository Is Included (Currently)
+
 **The truth is: WE PROBABLY DON'T NEED THE ENTIRE MAGENTA REPO!**
 
-The full Magenta repository (~500MB+ with thousands of files) is included, but we actually only use:
+The full Magenta repository (~500MB+ with thousands of files) is included, but
+we actually only use:
 
 1. **Audio Processing Utilities**: `audio_recorder.py` and related modules
-2. **Model Interface**: `tflite_model.py` provides TensorFlow Lite wrapper  
+2. **Model Interface**: `tflite_model.py` provides TensorFlow Lite wrapper
 3. **Some Python imports**: A few internal Magenta utilities
 4. **Development Convenience**: Original realtime scripts as reference
 
 ### What We Actually Need (Minimal Dependencies)
 
 **Essential Files (already copied to root):**
+
 - `audio_recorder.py`: Audio input handling, microphone enumeration
 - `tflite_model.py`: TensorFlow Lite model loading and inference
 - `realtime_web.py`: Main application (our modified version)
@@ -172,19 +190,22 @@ The full Magenta repository (~500MB+ with thousands of files) is included, but w
 - `onsets_frames_wavinput_no_offset_uni.tflite`: Model file (76MB)
 
 **Python Dependencies (installable via pip):**
+
 - `tensorflow` (or `tensorflow-lite-runtime` for smaller footprint)
 - `numpy`, `scipy`, `librosa` (audio processing)
 - `websockets`, `asyncio` (WebSocket server)
 - `pyaudio`, `soundfile` (audio I/O)
 - `absl-py` (command-line flags)
 
-**The entire `magenta/` directory could probably be removed** if we fix the remaining import dependencies!
+**The entire `magenta/` directory could probably be removed** if we fix the
+remaining import dependencies!
 
 ### Removing Magenta Dependency (Recommended for Production)
 
 **Steps to create a minimal, standalone version:**
 
 1. **Test Current Dependencies:**
+
 ```bash
 # Try running without Magenta repo
 mv magenta magenta_backup
@@ -192,12 +213,14 @@ source magenta_env/bin/activate
 python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite --web_output
 ```
 
-2. **Fix Any Import Errors:**
-Most likely you'll need to modify a few import statements in:
+2. **Fix Any Import Errors:** Most likely you'll need to modify a few import
+   statements in:
+
 - `audio_recorder.py` (remove internal Magenta imports)
 - `tflite_model.py` (use standard TensorFlow imports)
 
 3. **Create Minimal Project Structure:**
+
 ```
 minimal-note-detection/
 ├── magenta_env/              # Virtual environment (keep)
@@ -211,17 +234,21 @@ minimal-note-detection/
 ```
 
 **Benefits of removing Magenta repo:**
+
 - **Size**: Reduces from ~500MB to ~100MB (mostly the model file)
-- **Simplicity**: Cleaner dependency management  
+- **Simplicity**: Cleaner dependency management
 - **Deployment**: Easier to containerize and deploy
 - **Understanding**: Clearer what the project actually needs
 
-**Risk**: Some edge cases in audio processing might break, but the core functionality should work fine.
+**Risk**: Some edge cases in audio processing might break, but the core
+functionality should work fine.
 
 ## Available Models & Alternatives
 
 ### Current Model
+
 **`onsets_frames_wavinput_no_offset_uni.tflite`**
+
 - **Type**: Unidirectional LSTM (most efficient for real-time)
 - **Input**: Raw audio waveform (16kHz mono)
 - **Output**: 88-key piano transcription
@@ -244,6 +271,7 @@ minimal-note-detection/
    - Different preprocessing pipeline required
 
 ### Model Download Sources
+
 ```bash
 # From Magenta's releases
 wget https://storage.googleapis.com/magentadata/models/onsets_frames_transcription/tflite/onsets_frames_wavinput_no_offset_uni.tflite
@@ -257,15 +285,16 @@ wget https://storage.googleapis.com/magentadata/models/onsets_frames_transcripti
 ### Architecture Adaptation for Angular
 
 #### 1. Backend Service Integration
+
 ```typescript
 // Create Angular service
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class NoteDetectionService {
   private socket?: WebSocket;
   private noteData$ = new BehaviorSubject<NoteData | null>(null);
-  
+
   connect(): Observable<NoteData> {
-    this.socket = new WebSocket('ws://localhost:8765');
+    this.socket = new WebSocket("ws://localhost:8765");
     // ... WebSocket handling
     return this.noteData$.asObservable();
   }
@@ -273,18 +302,20 @@ export class NoteDetectionService {
 ```
 
 #### 2. Canvas Component
+
 ```typescript
 @Component({
-  selector: 'app-note-waterfall',
-  template: '<canvas #canvas width="1200" height="400"></canvas>'
+  selector: "app-note-waterfall",
+  template: '<canvas #canvas width="1200" height="400"></canvas>',
 })
 export class NoteWaterfallComponent {
-  @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild("canvas")
+  canvasRef!: ElementRef<HTMLCanvasElement>;
   private ctx!: CanvasRenderingContext2D;
-  
+
   // Convert vanilla JS animation loop to Angular
   ngOnInit() {
-    this.noteDetectionService.connect().subscribe(data => {
+    this.noteDetectionService.connect().subscribe((data) => {
       this.updateNoteValues(data);
     });
     this.startAnimation();
@@ -293,17 +324,18 @@ export class NoteWaterfallComponent {
 ```
 
 #### 3. Settings with Angular Signals
+
 ```typescript
 // Convert settings to Angular signals
 export class SettingsService {
   frameThreshold = signal(0.3);
   onsetThreshold = signal(0.5);
   fadeSpeed = signal(0.02);
-  
+
   // Computed values
   thresholdSettings = computed(() => ({
     frame: this.frameThreshold(),
-    onset: this.onsetThreshold()
+    onset: this.onsetThreshold(),
   }));
 }
 ```
@@ -311,7 +343,9 @@ export class SettingsService {
 ### Dependency Extraction Strategy
 
 #### Option 1: Minimal Extraction
+
 Keep only essential files:
+
 ```
 src/
 ├── services/
@@ -328,7 +362,9 @@ src/
 ```
 
 #### Option 2: Complete Decoupling
+
 Replace Magenta dependencies:
+
 ```typescript
 // Custom audio processing
 class AudioProcessor {
@@ -345,24 +381,28 @@ class TensorFlowLiteService {
 ### Migration Checklist
 
 #### Phase 1: Backend Preservation
+
 - [ ] Copy Python backend files to Angular project
 - [ ] Extract minimal Magenta dependencies (3-4 files)
 - [ ] Test standalone Python execution
 - [ ] Document Python virtual environment setup
 
-#### Phase 2: Frontend Migration  
+#### Phase 2: Frontend Migration
+
 - [ ] Create Angular service for WebSocket communication
 - [ ] Convert canvas animation to Angular component
 - [ ] Migrate settings panel to Angular forms with signals
 - [ ] Implement performance monitoring
 
 #### Phase 3: Integration Testing
+
 - [ ] Test WebSocket connectivity
-- [ ] Verify real-time performance  
+- [ ] Verify real-time performance
 - [ ] Test all settings controls
 - [ ] Cross-browser compatibility
 
 #### Phase 4: Optional Enhancements
+
 - [ ] Replace Python backend with TensorFlow.js (if needed)
 - [ ] Add recording/playback features
 - [ ] Implement MIDI export
@@ -373,6 +413,7 @@ class TensorFlowLiteService {
 #### Setting Up the Python Environment
 
 **1. Create Virtual Environment (Python 3.11+ recommended):**
+
 ```bash
 # Create virtual environment  
 python3 -m venv magenta_env
@@ -385,6 +426,7 @@ pip install --upgrade pip
 ```
 
 **2. Install Dependencies:**
+
 ```bash
 # Core ML dependencies
 pip install tensorflow librosa numpy scipy
@@ -403,6 +445,7 @@ brew install portaudio libsamplerate cmake
 ```
 
 **3. Download Model:**
+
 ```bash
 # Download the TensorFlow Lite model (76MB)
 wget https://storage.googleapis.com/magentadata/models/onsets_frames_transcription/tflite/onsets_frames_wavinput_no_offset_uni.tflite
@@ -411,6 +454,7 @@ wget https://storage.googleapis.com/magentadata/models/onsets_frames_transcripti
 #### Development Workflow
 
 **Current Setup:**
+
 ```bash
 # Activate Python environment
 source magenta_env/bin/activate
@@ -423,6 +467,7 @@ python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite 
 ```
 
 **For Angular Integration:**
+
 ```bash
 # Python backend (terminal 1)
 source magenta_env/bin/activate  
@@ -433,6 +478,7 @@ ng serve
 ```
 
 #### Production Options
+
 1. **Dual Service**: Python microservice + Angular app
 2. **Docker Container**: Both services in container
 3. **TensorFlow.js**: Full client-side processing (future)
@@ -440,6 +486,7 @@ ng serve
 ## Performance Characteristics
 
 ### Latency Breakdown
+
 - **Audio Buffer**: ~100-200ms (depends on audio device)
 - **Frame Processing**: 128ms frame size at 16kHz
 - **Model Inference**: ~20-50ms per frame
@@ -448,6 +495,7 @@ ng serve
 - **Total Latency**: ~150-400ms end-to-end
 
 ### Resource Usage
+
 - **CPU**: 15-30% (4 worker processes)
 - **Memory**: ~200MB (Python + model)
 - **Network**: ~50KB/s (WebSocket data)
@@ -456,21 +504,52 @@ ng serve
 ## Future Enhancement Opportunities
 
 ### Technical Improvements
+
 1. **TensorFlow.js Migration**: Eliminate Python dependency
 2. **Web Audio API**: Direct browser audio access
 3. **WASM Optimization**: Faster client-side processing
 4. **WebRTC**: Lower-latency audio streaming
 
 ### Feature Extensions
+
 1. **MIDI Export**: Save detected performances
 2. **Chord Recognition**: Identify chord progressions
 3. **Multi-instrument Models**: Guitar, drums, etc.
 4. **Real-time Effects**: Audio processing integration
 
 ### UI/UX Enhancements
+
 1. **Multiple Visualization Modes**: Piano roll, spectrum, etc.
-2. **Recording/Playback**: Capture and review sessions  
+2. **Recording/Playback**: Capture and review sessions
 3. **Social Features**: Share performances
 4. **Educational Tools**: Music learning applications
 
-This documentation should provide a comprehensive understanding of the project architecture and clear guidance for integration into your Angular application. The modular design makes it relatively straightforward to extract the core functionality while preserving the real-time performance characteristics.
+This documentation should provide a comprehensive understanding of the project
+architecture and clear guidance for integration into your Angular application.
+The modular design makes it relatively straightforward to extract the core
+functionality while preserving the real-time performance characteristics.
+
+#### on killing zombie processes
+
+1. Found processes using port 8765: lsof -ti:8765 found PIDs 3095 and 53695
+2. Killed them: kill -9 3095 53695
+3. Verified port is free: lsof -ti:8765 now returns nothing (port available)
+4. Cleaned up background processes from our testing
+
+For future reference, here are the commands to handle this:
+
+Quick one-liner to kill all processes on port 8765: kill -9 $(lsof -ti:8765)
+
+Or step by step:
+
+# Find what's using the port
+
+lsof -i:8765
+
+# Kill specific processes
+
+kill -9 <PID1> <PID2>
+
+# Or kill all on that port
+
+lsof -ti:8765 | xargs kill -9
