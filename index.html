@@ -722,6 +722,16 @@ class NoteDebouncer {
                     'G#': '#a29bfe', 'A': '#0984e3', 'A#': '#6c5ce7', 'B': '#00b894'
                 };
                 
+                // Precompute RGB for faster drawing
+                this.noteRGB = {};
+                Object.keys(this.noteColors).forEach(note => {
+                    const color = this.noteColors[note];
+                    const r = parseInt(color.slice(1, 3), 16);
+                    const g = parseInt(color.slice(3, 5), 16);
+                    const b = parseInt(color.slice(5, 7), 16);
+                    this.noteRGB[note] = {r, g, b};
+                });
+                
                 // Visualization settings
                 this.settings = {
                     frameThreshold: 0.3,
@@ -823,9 +833,12 @@ class NoteDebouncer {
                 this.fpsFrames = this.fpsFrames.filter(time => now - time < 1000);
                 
                 // Update FPS display every 30 frames
-                if (this.fpsFrames.length % 30 === 0) {
-                    document.getElementById('canvas-fps').textContent = this.fpsFrames.length;
+                if (this.animationCount % 30 === 0) {
+                    const now = performance.now();
+                    const recentFrames = this.fpsFrames.filter(time => now - time < 1000);
+                    document.getElementById('canvas-fps').textContent = recentFrames.length;
                 }
+                this.animationCount++;
                 
                 // Continue animation loop - runs continuously at 60fps
                 requestAnimationFrame(() => this.animate());
@@ -841,29 +854,23 @@ class NoteDebouncer {
                     
                     // Always draw rectangle, even if activation is 0 (just very transparent)
                     if (activation > 0 || this.settings.showNoiseFloor) {
-                        this.drawNoteRectToBuffer(i, activation);
+                        this.drawNoteRectToBuffer(i, activation, note);
                     }
                 }
             }
             
-            drawNoteRectToBuffer(noteIndex, activation) {
+            drawNoteRectToBuffer(noteIndex, activation, note) {
                 const x = noteIndex * this.noteWidth;
                 const y = this.canvasHeight - 15; // Always at bottom
                 
                 // Calculate opacity based on activation level
                 const alpha = Math.max(0.05, activation); // Minimum visibility
                 
-                // Get note color
-                const note = this.notes[noteIndex % 12];
-                const color = this.noteColors[note] || '#ffffff';
-                
-                // Convert hex to RGB
-                const r = parseInt(color.slice(1, 3), 16);
-                const g = parseInt(color.slice(3, 5), 16);
-                const b = parseInt(color.slice(5, 7), 16);
+                // Get precomputed RGB
+                const rgb = this.noteRGB[note] || {r: 255, g: 255, b: 255};
                 
                 // Draw rectangle to back buffer
-                this.backCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                this.backCtx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
                 this.backCtx.fillRect(x, y, this.noteWidth - 1, 12);
             }
             
@@ -1024,7 +1031,7 @@ class NoteDebouncer {
             }
 
             handleNoteData(noteData) {
-                console.log('Received note data:', noteData);
+                // console.log('Received note data:', noteData);
                 this.noteCount++;
                 document.getElementById('note-count').textContent = this.noteCount;
                 
@@ -1044,16 +1051,17 @@ class NoteDebouncer {
                 // Clear previous active states
                 this.activeNotes.clear();
 
-                // Update note values using all_notes data (includes zeros)
+                // Create map for fast note lookup
+                const noteMap = {};
                 if (noteData.all_notes && noteData.all_notes.length > 0) {
                     noteData.all_notes.forEach(noteInfo => {
                         const note = noteInfo.note;
                         const octave = noteInfo.octave || 4;
-                        const strength = noteInfo.strength || 0;
                         const noteKey = `${note}-${octave}`;
+                        noteMap[noteKey] = noteInfo;
                         
                         // Update note value with current strength (no decay needed - we get all values)
-                        this.noteValues[noteKey] = strength;
+                        this.noteValues[noteKey] = noteInfo.strength || 0;
                     });
                 }
 
@@ -1070,37 +1078,29 @@ class NoteDebouncer {
                 // Update all note bars with current values and create history using thresholds
                 let historyLine = '';
                 const noteRange = 88;
+                const noteNames = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
                 
                 for (let i = 0; i < noteRange; i++) {
-                    const noteNames = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
                     const noteName = noteNames[i % 12];
                     const octave = Math.floor(i / 12);
                     const noteKey = `${noteName}-${octave}`;
                     
-                    // Get raw values for this note
+                    // Get raw values from map for fast lookup
+                    const noteInfo = noteMap[noteKey];
                     let rawValue = this.noteValues[noteKey] || 0;
                     let frameProb = 0;
                     let onsetProb = 0;
                     
-                    // Find the corresponding note data to get frame/onset probabilities
-                    if (noteData.all_notes) {
-                        const noteInfo = noteData.all_notes.find(n => `${n.note}-${n.octave}` === noteKey);
-                        if (noteInfo) {
-                            frameProb = noteInfo.frame_prob || 0;
-                            onsetProb = noteInfo.onset_prob || 0;
-                            rawValue = noteInfo.strength || 0;
-                        }
+                    if (noteInfo) {
+                        frameProb = noteInfo.frame_prob || 0;
+                        onsetProb = noteInfo.onset_prob || 0;
+                        rawValue = noteInfo.strength || 0;
                     }
                     
                     // Apply same thresholding logic as terminal
                     const isFrame = frameProb > this.settings.frameThreshold;
                     const isOnset = onsetProb > this.settings.onsetThreshold;
                     const shouldShow = isFrame || isOnset;
-                    
-                    // Debug logging for detected notes
-                    if (shouldShow) {
-                        console.log(`Note detected: ${noteName}${octave}, frame: ${frameProb.toFixed(3)}, onset: ${onsetProb.toFixed(3)}, raw: ${rawValue.toFixed(3)}`);
-                    }
                     
                     // Determine display value
                     let displayValue = 0;
@@ -1112,11 +1112,6 @@ class NoteDebouncer {
                     
                     // Update note value - animation loop will draw it
                     this.noteValues[noteKey] = displayValue;
-                    
-                    // Debug note updates
-                    if (shouldShow) {
-                        console.log(`Note ${noteName}${octave}: activation=${displayValue.toFixed(3)}`);
-                    }
                     
                     // Update history line (only show detected notes, like terminal)
                     if (shouldShow) {
@@ -1138,10 +1133,10 @@ class NoteDebouncer {
                     this.historyLines.shift();
                 }
                 
-                // Update history display
-                const historyContainer = document.getElementById('historyContainer');
-                historyContainer.innerHTML = this.historyLines.join('<br>');
-                historyContainer.scrollTop = historyContainer.scrollHeight;
+                // Update history display (temporarily comment to test canvas isolation)
+                // const historyContainer = document.getElementById('historyContainer');
+                // historyContainer.innerHTML = this.historyLines.join('<br>');
+                // historyContainer.scrollTop = historyContainer.scrollHeight;
 
             }
         }
