@@ -202,46 +202,85 @@ remaining import dependencies!
 
 ### Removing Magenta Dependency (Recommended for Production)
 
-**Steps to create a minimal, standalone version:**
+**Investigation Findings:**
+An analysis of the project files (realtime_web.py, audio_recorder.py, tflite_model.py, start_web_demo.py) shows no direct imports from the 'magenta' package. All matches for 'from magenta' or 'import magenta' were internal to the magenta/ directory itself. The core utilities (audio_recorder.py and tflite_model.py) are standalone extractions from Magenta, relying only on standard libraries and pip-installable packages like numpy, pyaudio, tensorflow-lite-runtime (or tflite_runtime), scipy, librosa (or samplerate), absl-py, websockets, colorama, and attr. realtime_web.py integrates these with multiprocessing and asyncio for WebSocket streaming. start_web_demo.py is a simple launcher using subprocess and http.server.
 
-1. **Test Current Dependencies:**
+This confirms the project is already independent of the full magenta/ repository. Removal is feasible without code modifications, reducing bloat while preserving functionality.
 
-```bash
-# Try running without Magenta repo
-mv magenta magenta_backup
-source magenta_env/bin/activate
-python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite --web_output
-```
+**Steps to Remove Magenta Repository:**
 
-2. **Fix Any Import Errors:** Most likely you'll need to modify a few import
-   statements in:
+1. **Backup the Directory:**
+   ```bash
+   mv magenta magenta_backup
+   ```
+   This preserves the original repo for reference if needed.
 
-- `audio_recorder.py` (remove internal Magenta imports)
-- `tflite_model.py` (use standard TensorFlow imports)
+2. **Verify Dependencies via Virtual Environment:**
+   Ensure the virtual environment (magenta_env) has all required packages installed. Create or update requirements.txt with:
+   ```
+   tensorflow-lite-runtime
+   numpy
+   scipy
+   librosa  # Or samplerate as alternative for resampling
+   pyaudio
+   soundfile
+   websockets
+   absl-py
+   colorama
+   attrs
+   ```
+   Install if missing:
+   ```bash
+   source magenta_env/bin/activate
+   pip install -r requirements.txt
+   ```
 
-3. **Create Minimal Project Structure:**
+3. **Test the Application Without Magenta:**
+   ```bash
+   source magenta_env/bin/activate
+   python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite --web_output
+   ```
+   Run the full demo:
+   ```bash
+   python start_web_demo.py
+   ```
+   Monitor for errors. If successful, the app should function identically (audio capture, model inference, WebSocket streaming, visualization).
 
-```
-minimal-note-detection/
-├── magenta_env/              # Virtual environment (keep)
-├── realtime_web.py          # Main app
-├── start_web_demo.py        # Launcher  
-├── audio_recorder.py        # Audio utilities (standalone)
-├── tflite_model.py         # Model wrapper (standalone)
-├── index.html              # Web interface
-├── onsets_frames_wavinput_no_offset_uni.tflite  # Model file
-└── requirements.txt        # Python dependencies
-```
+4. **Permanently Delete the Backup (Optional):**
+   ```bash
+   rm -rf magenta_backup
+   ```
+   Update .gitignore to exclude magenta/ if it was committed.
 
-**Benefits of removing Magenta repo:**
+5. **Create Minimal Project Structure:**
+   After removal, the project becomes:
+   ```
+   note-detection/
+   ├── magenta_env/                          # Virtual environment (keep or recreate)
+   ├── realtime_web.py                       # Main application
+   ├── start_web_demo.py                     # Launcher script
+   ├── audio_recorder.py                     # Audio utilities (standalone)
+   ├── tflite_model.py                       # Model wrapper (standalone)
+   ├── index.html                            # Web interface
+   ├── onsets_frames_wavinput_no_offset_uni.tflite  # Model file (76MB)
+   ├── requirements.txt                       # Python dependencies
+   └── PROJECT_DOCUMENTATION.md              # Updated docs
+   ```
 
-- **Size**: Reduces from ~500MB to ~100MB (mostly the model file)
-- **Simplicity**: Cleaner dependency management
-- **Deployment**: Easier to containerize and deploy
-- **Understanding**: Clearer what the project actually needs
+**Benefits of Removing Magenta Repo:**
+- **Size Reduction**: From ~500MB+ to ~100MB (primarily the model file and virtual env).
+- **Simplicity**: Eliminates unnecessary files, simplifying the repo and reducing git history bloat.
+- **Deployment**: Easier to package (e.g., Docker), distribute, or deploy without extraneous code.
+- **Maintenance**: Clearer codebase; no confusion from unused Magenta components.
+- **Security/Compliance**: Smaller attack surface; avoids including full third-party repo.
 
-**Risk**: Some edge cases in audio processing might break, but the core
-functionality should work fine.
+**Potential Risks and Mitigations:**
+- **Import Errors**: Unlikely, as no direct dependencies found. If any arise (e.g., from virtual env paths), reinstall packages via requirements.txt.
+- **Edge Cases in Audio Processing**: audio_recorder.py uses scipy/librosa for resampling—ensure compatibility. Test on different OS/mics.
+- **Development Reference Loss**: Original Magenta scripts are gone; keep magenta_backup if needed for future experiments, or reference the official GitHub repo.
+- **Virtual Env Issues**: If magenta_env was created with Magenta's setup.py, recreate it fresh with pip installs to avoid hidden dependencies.
+
+Overall, removal is low-risk and highly recommended for production. If tests pass, the project becomes fully standalone.
 
 ## Available Models & Alternatives
 
