@@ -402,6 +402,7 @@
         <div>WebSocket: <span id="ws-status">Connecting...</span></div>
         <div>Frames Received: <span id="note-count">0</span></div>
         <div>Update Rate: <span id="update-rate">0</span> FPS</div>
+        <div>Canvas FPS: <span id="canvas-fps">0</span> FPS</div>
     </div>
 
     <div class="visualization-container">
@@ -732,6 +733,10 @@ class NoteDebouncer {
                     fadeSpeed: 0.02  // How fast notes fade (0.01 = very slow, 0.1 = very fast)
                 };
                 
+                // FPS monitoring
+                this.fpsFrames = [];
+                this.fpsLastTime = performance.now();
+                
                 this.initCanvas();
                 this.initSettings();
                 this.connectWebSocket();
@@ -810,8 +815,17 @@ class NoteDebouncer {
                 this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
                 this.ctx.drawImage(this.backBuffer, 0, 0);
 
-                this.animationCount +=1 
-                console.log('draw', this.animationCount)
+                // FPS calculation
+                const now = performance.now();
+                this.fpsFrames.push(now);
+                
+                // Keep only frames from the last second
+                this.fpsFrames = this.fpsFrames.filter(time => now - time < 1000);
+                
+                // Update FPS display every 30 frames
+                if (this.fpsFrames.length % 30 === 0) {
+                    document.getElementById('canvas-fps').textContent = this.fpsFrames.length;
+                }
                 
                 // Continue animation loop - runs continuously at 60fps
                 requestAnimationFrame(() => this.animate());
