@@ -538,7 +538,9 @@ functionality while preserving the real-time performance characteristics.
 
 For future reference, here are the commands to handle this:
 
-Quick one-liner to kill all processes on port 8765: kill -9 $(lsof -ti:8765)
+Quick one-liner to kill all processes on port 8765: 
+
+kill -9 $(lsof -ti:8765)
 
 Or step by step:
 
