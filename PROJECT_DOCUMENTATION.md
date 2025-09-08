@@ -135,27 +135,88 @@ The project started with a simple objective: implement local real-time note dete
 The project includes the entire Magenta repository as a subdirectory:
 ```
 note-detection/
-├── magenta/                    # Full Magenta repository
+├── magenta/                    # Full Magenta repository (entire clone)
 │   ├── magenta/models/onsets_frames_transcription/
 │   ├── setup.py
+│   └── ... (thousands of files)
+├── magenta_env/               # Python virtual environment
+│   ├── bin/activate
+│   ├── lib/python3.13/
 │   └── ...
 ├── realtime_web.py            # Main application
-├── audio_recorder.py          # Audio utilities (from Magenta)
-├── tflite_model.py           # Model wrapper (from Magenta)
-└── onsets_frames_wavinput_no_offset_uni.tflite  # Model file
+├── start_web_demo.py          # Simple launcher script
+├── audio_recorder.py          # Audio utilities (copied from Magenta)
+├── tflite_model.py           # Model wrapper (copied from Magenta)
+├── index.html                # Web interface with waterfall visualization
+└── onsets_frames_wavinput_no_offset_uni.tflite  # TensorFlow Lite model (76MB)
 ```
 
-### Why Magenta Repository Is Included
+### Why Magenta Repository Is Included (Currently)
+**The truth is: WE PROBABLY DON'T NEED THE ENTIRE MAGENTA REPO!**
+
+The full Magenta repository (~500MB+ with thousands of files) is included, but we actually only use:
+
 1. **Audio Processing Utilities**: `audio_recorder.py` and related modules
-2. **Model Interface**: `tflite_model.py` provides TensorFlow Lite wrapper
-3. **Dependencies**: Some imports reference Magenta's internal structure
+2. **Model Interface**: `tflite_model.py` provides TensorFlow Lite wrapper  
+3. **Some Python imports**: A few internal Magenta utilities
 4. **Development Convenience**: Original realtime scripts as reference
 
-### Extracted Dependencies
-The following files were copied from Magenta for standalone operation:
+### What We Actually Need (Minimal Dependencies)
+
+**Essential Files (already copied to root):**
 - `audio_recorder.py`: Audio input handling, microphone enumeration
 - `tflite_model.py`: TensorFlow Lite model loading and inference
-- Core audio processing utilities
+- `realtime_web.py`: Main application (our modified version)
+- `start_web_demo.py`: Launcher script
+- `index.html`: Web interface
+- `onsets_frames_wavinput_no_offset_uni.tflite`: Model file (76MB)
+
+**Python Dependencies (installable via pip):**
+- `tensorflow` (or `tensorflow-lite-runtime` for smaller footprint)
+- `numpy`, `scipy`, `librosa` (audio processing)
+- `websockets`, `asyncio` (WebSocket server)
+- `pyaudio`, `soundfile` (audio I/O)
+- `absl-py` (command-line flags)
+
+**The entire `magenta/` directory could probably be removed** if we fix the remaining import dependencies!
+
+### Removing Magenta Dependency (Recommended for Production)
+
+**Steps to create a minimal, standalone version:**
+
+1. **Test Current Dependencies:**
+```bash
+# Try running without Magenta repo
+mv magenta magenta_backup
+source magenta_env/bin/activate
+python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite --web_output
+```
+
+2. **Fix Any Import Errors:**
+Most likely you'll need to modify a few import statements in:
+- `audio_recorder.py` (remove internal Magenta imports)
+- `tflite_model.py` (use standard TensorFlow imports)
+
+3. **Create Minimal Project Structure:**
+```
+minimal-note-detection/
+├── magenta_env/              # Virtual environment (keep)
+├── realtime_web.py          # Main app
+├── start_web_demo.py        # Launcher  
+├── audio_recorder.py        # Audio utilities (standalone)
+├── tflite_model.py         # Model wrapper (standalone)
+├── index.html              # Web interface
+├── onsets_frames_wavinput_no_offset_uni.tflite  # Model file
+└── requirements.txt        # Python dependencies
+```
+
+**Benefits of removing Magenta repo:**
+- **Size**: Reduces from ~500MB to ~100MB (mostly the model file)
+- **Simplicity**: Cleaner dependency management  
+- **Deployment**: Easier to containerize and deploy
+- **Understanding**: Clearer what the project actually needs
+
+**Risk**: Some edge cases in audio processing might break, but the core functionality should work fine.
 
 ## Available Models & Alternatives
 
@@ -307,16 +368,67 @@ class TensorFlowLiteService {
 - [ ] Implement MIDI export
 - [ ] Add chord recognition
 
-### Deployment Considerations
+### Environment Setup & Development
 
-#### Development Setup
+#### Setting Up the Python Environment
+
+**1. Create Virtual Environment (Python 3.11+ recommended):**
 ```bash
-# Python backend
-cd python-backend
-source venv/bin/activate
-python realtime_web.py
+# Create virtual environment  
+python3 -m venv magenta_env
 
-# Angular frontend  
+# Activate it
+source magenta_env/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+```
+
+**2. Install Dependencies:**
+```bash
+# Core ML dependencies
+pip install tensorflow librosa numpy scipy
+
+# Audio dependencies  
+pip install pyaudio soundfile
+
+# Web dependencies
+pip install websockets asyncio-mqtt
+
+# Utility dependencies
+pip install absl-py colorama attr
+
+# System audio dependencies (macOS)
+brew install portaudio libsamplerate cmake
+```
+
+**3. Download Model:**
+```bash
+# Download the TensorFlow Lite model (76MB)
+wget https://storage.googleapis.com/magentadata/models/onsets_frames_transcription/tflite/onsets_frames_wavinput_no_offset_uni.tflite
+```
+
+#### Development Workflow
+
+**Current Setup:**
+```bash
+# Activate Python environment
+source magenta_env/bin/activate
+
+# Run the complete demo (starts HTTP server + note detection)
+python start_web_demo.py
+
+# OR run just the note detection backend
+python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite --web_output
+```
+
+**For Angular Integration:**
+```bash
+# Python backend (terminal 1)
+source magenta_env/bin/activate  
+python realtime_web.py --model_path onsets_frames_wavinput_no_offset_uni.tflite --web_output
+
+# Angular frontend (terminal 2)
 ng serve
 ```
 
