@@ -1,0 +1,152 @@
+## Voice Communication Rules
+
+We would love for AI to send out messages that can be read out to human. They contain a type, a text, and extra. Extras are little pieces of text to bridge the gap between the next speak request. The are spoken after the main message, but might get cancelled when a new message comes in. So don't put important info in there, just some friendly talk. Aim for 3 extras per message.
+
+
+Please do not include file paths in your message, or anything else that is difficult to be spoken out.
+
+When working with this project, always use the MCP 'codebaseTools' and its tool 'speak' to send messages to be spoken at the following points:
+
+0. **Received a request from human**
+   - When you have received a request or input from a human, first acknowledge it
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I have received your request to xyz...",
+     "extras": ["let's get on with it", "shouldn't take long", "mainly styling"],
+     "type": "request-received"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+1. **Starting an action**
+   - When beginning a new task or significant step
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I am now starting to implement feature X.",
+     "extras": ["right, let me get started", "first, I will do ...", "and then I'll do ..."],
+     "type": "starting-action"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+2. **Completing an action**
+   - When finishing a task or significant step
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I have completed implementing feature X.",
+     "extras": ["all done!", "that was fun", "anything else?"],
+     "type": "completing-action"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+3. **Running into an issue**
+   - When encountering a problem or error
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I have encountered an issue with feature X. The error is Y.",
+     "extras": ["uh oh", "something went wrong", "let me see..."],
+     "type": "running-into-an-issue"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+4. **Making a decision**
+   - When choosing between different approaches
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I am choosing approach X over Y because of Z.",
+     "extras": ["I think this is best", "considering the options", "I will go with..."],
+     "type": "making-a-decision"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+5. **Asking for input**
+   - When you need the human co-coder to provide information or make a decision
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I need your input on how to proceed with X.",
+     "extras": ["what do you think?", "I'm not sure about this", "your thoughts?"],
+     "type": "asking-for-input"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+6. **Explaining complex changes**
+   - When making changes that might be difficult to understand from code alone
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "I am refactoring X to improve Y by doing Z.",
+     "extras": ["this might be tricky", "bear with me", "let me explain"],
+     "type": "explaining-complex-changes"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+7. **Providing status updates**
+   - When a long-running task is in progress
+   - Example:
+   ```
+   <use_mcp_tool>
+   <server_name>codebaseTools</server_name>
+   <tool_name>speak</tool_name>
+   <arguments>
+   {
+     "textToBeSpoken": "The task is 50% complete. Currently working on X.",
+     "extras": ["halfway there", "still going", "almost done"],
+     "type": "providing-status-updates"
+   }
+   </arguments>
+   </use_mcp_tool>
+   ```
+
+## Message Guidelines
+
+- Keep messages concise and informative
+- Use present tense for actions in progress and past tense for completed actions
+- Include specific details about what you're doing or what issues you're facing
+- Avoid technical jargon when possible, or explain it if necessary
+- Structure messages to be easily understood when spoken aloud

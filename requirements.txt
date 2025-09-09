@@ -1,0 +1,27 @@
+# Core ML and Deep Learning
+tensorflow>=2.15.0,<3.0
+numpy>=1.24.0,<2.3.0  # Compatible with numba and other packages
+scipy>=1.10.0
+
+# Audio Processing
+librosa>=0.10.0
+soundfile>=0.12.0
+resampy>=0.4.0
+PyAudio>=0.2.14
+
+# Web Framework
+Flask>=3.0.0
+websockets>=12.0
+
+# Command Line and Utilities
+absl-py>=1.0.0  # For flags and logging
+colorama>=0.4.0  # For colored terminal output
+rich>=13.0.0
+attrs>=22.0.0  # Required for attr module
+six>=1.16.0  # Python 2/3 compatibility
+
+# Optional: TensorFlow.js conversion (has dependency issues, install separately if needed)
+# tensorflowjs>=4.0.0
+
+# Optional: Jupyter notebooks
+# jupyter>=1.0.0
