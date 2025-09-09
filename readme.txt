@@ -1,19 +1,14 @@
-I'm trying to run realtime, polymorphic note detection, and I came across this page: https://github.com/magenta/magenta/tree/main/magenta/models/onsets_frames_transcription/realtime
 
-I would like to run it locall to try it out.
+# Realtime Note Detection
 
-Nothing has been installed yet.
+Origin: https://github.com/magenta/magenta/tree/main/magenta/models/onsets_frames_transcription/realtime
 
-Can you help me create a virtual environment, install what is needed, to help me run this demo?
+To start the note detection app, first create a virtual environment and install dependencies:
 
-We can use this document to track our progress.
-
-///
-
+python3 -m venv magenta_env
 source magenta_env/bin/activate
+pip install -r requirements.txt
 
-python start_web_demo.py 
-
-
-///
+then run:
+python start_web_demo.py
 

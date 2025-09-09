@@ -166,45 +166,7 @@ note-detection/
 └── onsets_frames_wavinput_no_offset_uni.tflite  # TensorFlow Lite model (76MB)
 ```
 
-### Why Magenta Repository Is Included (Currently)
 
-**The truth is: WE PROBABLY DON'T NEED THE ENTIRE MAGENTA REPO!**
-
-The full Magenta repository (~500MB+ with thousands of files) is included, but
-we actually only use:
-
-1. **Audio Processing Utilities**: `audio_recorder.py` and related modules
-2. **Model Interface**: `tflite_model.py` provides TensorFlow Lite wrapper
-3. **Some Python imports**: A few internal Magenta utilities
-4. **Development Convenience**: Original realtime scripts as reference
-
-### What We Actually Need (Minimal Dependencies)
-
-**Essential Files (already copied to root):**
-
-- `audio_recorder.py`: Audio input handling, microphone enumeration
-- `tflite_model.py`: TensorFlow Lite model loading and inference
-- `realtime_web.py`: Main application (our modified version)
-- `start_web_demo.py`: Launcher script
-- `index.html`: Web interface
-- `onsets_frames_wavinput_no_offset_uni.tflite`: Model file (76MB)
-
-**Python Dependencies (installable via pip):**
-
-- `tensorflow` (or `tensorflow-lite-runtime` for smaller footprint)
-- `numpy`, `scipy`, `librosa` (audio processing)
-- `websockets`, `asyncio` (WebSocket server)
-- `pyaudio`, `soundfile` (audio I/O)
-- `absl-py` (command-line flags)
-
-**The entire `magenta/` directory could probably be removed** if we fix the
-remaining import dependencies!
-
-### Magenta Repository Removal Completed
-
-The full Magenta repository has been successfully removed from the project. The magenta/ directory was backed up as magenta_backup/, the application was tested and ran without errors (confirming independence from Magenta), and the backup was permanently deleted. The project is now minimal and standalone, relying only on pip-installable dependencies listed in requirements.txt.
-
-For reference, the original investigation confirmed no direct imports from Magenta in core files, allowing safe removal. Benefits include ~500MB size reduction, simpler maintenance, and easier deployment.
 
 ## Available Models & Alternatives
 
